@@ -146,6 +146,8 @@ class directory
     int hash(int, int);
     int split(int);
     int pairIndex(int, int);
+    void shrink(void);
+    void merge(int bucket_no);
 
 public:
     directory(int gd, int siz);
@@ -154,6 +156,8 @@ public:
     int search(int);
     int remove(int);
 };
+
+
 
 directory::directory(int gd, int siz)
 {
@@ -275,6 +279,43 @@ void directory::display()
         int ld = b[*i]->getld();
         cout << b[*i]->getSize() << " ";
         cout << ld << endl;
+    }
+}
+
+void directory::shrink(void)
+{
+    int i,flag=1;
+    for( i=0 ; i<b.size(); i++ )
+    {
+        if(b[i]->getld()==gd)
+        {
+            flag=0;
+            return;
+        }
+    }
+    gd--;
+    for(i = 0 ; i < 1<<gd ; i++ )
+        b.pop_back();
+}
+
+void directory::merge(int bucket_no)
+{
+    int local_depth,pair_index,index_diff,dir_size,i;
+
+    local_depth = b[bucket_no]->getld();
+    pair_index = pairIndex(bucket_no,local_depth);
+    index_diff = 1<<local_depth;
+    dir_size = 1<<gd;
+
+    if( b[pair_index]->getld() == local_depth )
+    {
+        b[pair_index]->decrdepth();
+        delete(b[bucket_no]);
+        b[bucket_no] = b[pair_index];
+        for( i=bucket_no-index_diff ; i>=0 ; i-=index_diff )
+            b[i] = b[pair_index];
+        for( i=bucket_no+index_diff ; i<dir_size ; i+=index_diff )
+            b[i] = b[pair_index];
     }
 }
 
