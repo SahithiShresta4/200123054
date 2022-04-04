@@ -1,304 +1,319 @@
-#include <iostream>
-#include <vector>
 #include <bits/stdc++.h>
 using namespace std;
 
-class hashBucket
+class bucket
 {
-    int localDepth, capacity;
-    vector<int> v;
+    int ld, size;
+    vector<int> b;
 
 public:
-    hashBucket()
+    bucket(int ld, int size);
+    int isEmpty(void);
+    int isFull(void);
+    int insert(int);
+    int search(int);
+    int remove(int);
+    int getld(void);
+    int incrdepth(void);
+    int decrdepth(void);
+    int display(void);
+    vector<int> copy(void);
+    void clr(void);
+    int getSize();
+};
+
+bucket::bucket(int ld, int size)
+{
+    this->ld = ld;
+    this->size = size;
+}
+
+int bucket::isEmpty()
+{
+    if (b.size() == 0)
     {
+        return (1);
     }
-    hashBucket(int localDepth, int capacity)
+    else
     {
-        this->localDepth = localDepth;
-        this->capacity = capacity;
+        return (0);
     }
-    int getLocalDepth()
+}
+
+int bucket::isFull()
+{
+    if (b.size() == size)
     {
-        return localDepth;
+        return (1);
     }
-    int increaseLocalDepth()
+    else
     {
-        localDepth++;
-        return localDepth;
+        return (0);
     }
-    int decreaseLocalDepth()
+}
+
+int bucket::insert(int n)
+{
+    if (!isFull())
     {
-        localDepth--;
-        return localDepth;
+        b.push_back(n);
+        return (1);
     }
-    int getCapacity()
+    else
     {
-        return capacity;
+        return (0);
     }
-    int isFull()
+}
+
+int bucket::search(int n)
+{
+    vector<int>::iterator it;
+    it = find(b.begin(), b.end(), n);
+    if (it != b.end())
     {
-        if (v.size() == capacity)
+        return (1);
+    }
+    else
+    {
+        return (0);
+    }
+}
+
+int bucket::remove(int n)
+{
+    vector<int>::iterator it;
+    it = find(b.begin(), b.end(), n);
+    if (it != b.end())
+    {
+        b.erase(it);
+        return (1);
+    }
+    else
+    {
+        return (0);
+    }
+}
+
+int bucket::getld()
+{
+    return (ld);
+}
+
+int bucket::incrdepth()
+{
+    ld++;
+    return (ld);
+}
+
+int bucket::decrdepth()
+{
+    ld--;
+    return (ld);
+}
+
+int bucket::display()
+{
+    vector<int>::iterator it;
+    for (it = b.begin(); it != b.end(); it++)
+    {
+        cout << (*it) << " ";
+    }
+    cout << endl;
+    return (1);
+}
+
+vector<int> bucket::copy()
+{
+    vector<int> temp(b.begin(), b.end());
+    return (temp);
+}
+
+void bucket::clr()
+{
+    b.clear();
+}
+
+int bucket::getSize()
+{
+    return (b.size());
+}
+
+class directory
+{
+    int gd, siz;
+    vector<bucket *> b;
+    vector<int> bno;
+    int hash(int, int);
+    int split(int);
+    int pairIndex(int, int);
+
+public:
+    directory(int gd, int siz);
+    int insert(int);
+    void display();
+    int search(int);
+    int remove(int);
+};
+
+directory::directory(int gd, int siz)
+{
+    this->gd = gd;
+    this->siz = siz;
+    for (int i = 0; i < (1 << gd); i++)
+    {
+        bno.push_back(i);
+        b.push_back(new bucket(gd, siz));
+    }
+}
+
+int directory::hash(int n, int depth)
+{
+    return (n & ((1 << depth) - 1));
+}
+
+int directory::pairIndex(int bucket_no, int depth)
+{
+    return bucket_no ^ (1 << (depth - 1));
+}
+
+int directory::split(int n)
+{
+    int ld, pi, id, d;
+    vector<int> temp;
+    ld = b[n]->incrdepth();
+    if (ld > gd)
+    {
+        for (int i = 0; i < (1 << gd); i++)
         {
-            return 1;
+            b.push_back(b[i]);
         }
-        return 0;
+        gd++;
     }
-    int isEmpty()
+    if (gd > 20)
     {
-        if (v.size() == 0)
-        {
-            return 1;
-        }
-        return 0;
+        return (0);
     }
-    int insert(int key)
+    pi = pairIndex(n, ld);
+    bno.push_back(pi);
+    b[pi] = new bucket(ld, siz);
+    temp = b[n]->copy();
+    b[n]->clr();
+    id = 1 << ld;
+    d = 1 << gd;
+    for (int i = pi - id; i >= 0; i -= id)
     {
-        if (!isFull())
-        {
-            v.push_back(key);
-            return 1;
-        }
-        return 0;
+        b[i] = b[pi];
     }
-    int remove(int key)
+    for (int i = pi + id; i < d; i += id)
     {
-        vector<int>::iterator it;
-        it = find(v.begin(), v.end(), key);
-        if (it != v.end())
+        b[i] = b[pi];
+    }
+    for (auto i = temp.begin(); i != temp.end(); i++)
+    {
+        insert(*i);
+    }
+    return (1);
+}
+
+int directory::insert(int n)
+{
+    int no;
+    int depth = gd;
+    while (depth >= 0)
+    {
+        no = hash(n, depth);
+        auto j = find(bno.begin(), bno.end(), no);
+        if (j != bno.end())
         {
-            v.erase(it);
-            return 1;
+            break;
         }
         else
         {
-            cout << "This key doesn't exist. So, can't remove!" << endl;
-            return 0;
+            depth--;
         }
     }
-    int search(int key)
+    int con = b[no]->insert(n);
+    if (con == 0)
     {
-        vector<int>::iterator it;
-        it = find(v.begin(), v.end(), key);
-        if (it != v.end())
-        {
-            return 1;
-        }
-        return 0;
+        split(no);
+        insert(n);
     }
-    void clear()
-    {
-        v.clear();
-    }
-    vector<int> copy()
-    {
-        vector<int> temp(v.begin(), v.end());
-        return temp;
-    }
-    int display()
-    {
-        vector<int>::iterator it;
-        for (it = v.begin(); it != v.end(); it++)
-        {
-            cout << *it << " ";
-        }
-        cout << endl;
-        return 1;
-    }
-};
+    return (1);
+}
 
-class Directory
+int directory::search(int n)
 {
-    int globalDepth;
-    int bucketCapacity;
-    vector<hashBucket *> hashBuckets;
-    vector<int> bno;
 
-    // Finding the hash value
-    int hash(int n, int depth)
+    for (auto i = bno.begin(); i != bno.end(); i++)
     {
-        return n & ((1 << depth) - 1);
-    }
-
-    int pairIndex(int bucketNum, int depth)
-    {
-        return bucketNum ^ (1 << (depth - 1));
-    }
-
-    int split(int bucketNum)
-    {
-        int localDepth, pair_index, indexDiff, dirSize;
-        vector<int> temp;
-
-        localDepth = hashBuckets[bucketNum]->increaseLocalDepth();
-        if (localDepth > globalDepth)
+        int j = b[*i]->search(n);
+        if (j == 1)
         {
-            for (int i = 0; i < (1 << globalDepth); i++)
-            {
-                hashBuckets.push_back(hashBuckets[i]);
-            }
-            globalDepth++;
-        }
-
-        if (globalDepth > 20)
-        {
-            return 0;
-        }
-
-        pair_index = pairIndex(bucketNum, localDepth);
-        bno.push_back(pair_index);
-        hashBuckets[pair_index] = new hashBucket(localDepth, bucketCapacity);
-        temp = hashBuckets[bucketNum]->copy();
-        hashBuckets[bucketNum]->clear();
-        indexDiff = (1 << localDepth);
-        dirSize = (1 << globalDepth);
-        for (int i = pair_index - indexDiff; i >= 0; i -= indexDiff)
-        {
-            hashBuckets[i] = hashBuckets[pair_index];
-        }
-        for (int i = pair_index + indexDiff; i < dirSize; i += indexDiff)
-        {
-            hashBuckets[i] = hashBuckets[pair_index];
-        }
-        for (auto it = temp.begin(); it != temp.end(); it++)
-        {
-            insert(*it);
-        }
-        return 1;
-    }
-
-public:
-    Directory()
-    {
-    }
-
-    Directory(int globalDepth, int bucketCapacity)
-    {
-        this->globalDepth = globalDepth;
-        this->bucketCapacity = bucketCapacity;
-        for (int i = 0; i < (1 << globalDepth); i++)
-        {
-            bno.push_back(i);
-            hashBuckets.push_back(new hashBucket(globalDepth, bucketCapacity));
+            return (*i);
         }
     }
+    return (-1);
+}
 
-    // Insertion
-    int insert(int key)
-    {
-        int bucketNum;
-        int depth = globalDepth;
-        while (depth >= 0)
-        {
-            bucketNum = hash(key, depth);
-            auto it = find(bno.begin(), bno.end(), bucketNum);
-            if (it != bno.end())
-            {
-                break;
-            }
-            else
-            {
-                depth--;
-            }
-        }
-
-        int status = hashBuckets[bucketNum]->insert(key);
-        if (status == 0)
-        {
-            split(bucketNum);
-            insert(key);
-        }
-        return 1;
-    }
-
-    // Remove
-    int remove(int key)
-    {
-        int i = search(key);
-        if (i != -1)
-        {
-            hashBuckets[i]->remove(key);
-            return 1;
-        }
-        return 0;
-    }
-
-    // Search
-    int search(int key)
-    {
-        for (auto it = bno.begin(); it != bno.end(); it++)
-        {
-            int i = hashBuckets[*it]->search(key);
-            if (i == 1)
-            {
-                return *it;
-            }
-        }
-        return -1;
-    }
-
-    // Display
-    void display()
-    {
-        cout << globalDepth << endl;
-        cout << bno.size() << endl;
-        for (auto it = bno.begin(); it != bno.end(); it++)
-        {
-            int localDepth = hashBuckets[*it]->getLocalDepth();
-            cout << hashBuckets[*it]->getCapacity() << " ";
-            cout << localDepth << endl;
-        }
-    }
-};
-
-void menu()
+int directory::remove(int n)
 {
-    cout << "------------------" << endl;
-    cout << "Codes for queries!" << endl;
-    cout << "2 to insert" << endl;
-    cout << "3 to search" << endl;
-    cout << "4 to delete" << endl;
-    cout << "5 to display the status of the hash table" << endl;
-    cout << "6 to quit" << endl;
-    cout << "------------------" << endl;
+    int j = search(n);
+    if (j != -1)
+    {
+        b[j]->remove(n);
+        return (1);
+    }
+    return (0);
+}
+
+void directory::display()
+{
+    cout << gd << endl;
+    cout << bno.size() << endl;
+    for (auto i = bno.begin(); i != bno.end(); i++)
+    {
+        int ld = b[*i]->getld();
+        cout << b[*i]->getSize() << " ";
+        cout << ld << endl;
+    }
 }
 
 int main()
 {
-    int globalDepth;
-    cin >> globalDepth;
-    int bucketCapacity;
-    cin >> bucketCapacity;
 
-    int key, choice;
+    int gd, size;
+    cin >> gd;
+    cin >> size;
+    directory b(gd, size);
+    int mode;
+    int j;
 
-    Directory D(globalDepth, bucketCapacity);
-
-    menu();
-
-    do
+    while (true)
     {
-        cin >> choice;
-        switch (choice)
+        cin >> mode;
+        if (mode == 6)
+        {
+            break;
+        }
+        switch (mode)
         {
         case 2:
-            cin >> key;
-            D.insert(key);
+            cin >> j;
+            b.insert(j);
             break;
-
         case 3:
-            cin >> key;
-            D.search(key);
+            cin >> j;
+            b.search(j);
             break;
-
         case 4:
-            cin >> key;
-            D.remove(key);
+            cin >> j;
+            b.remove(j);
             break;
-
         case 5:
-            D.display();
+            b.display();
+            break;
         }
-    } while (choice != 6);
+    }
 
-    return 0;
+    return (0);
 }
